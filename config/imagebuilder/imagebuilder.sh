@@ -210,7 +210,7 @@ rebuild_firmware() {
         perl-http-date perlbase-file perlbase-getopt perlbase-time perlbase-unicode perlbase-utf8 \
         pigz ppp ppp-mod-pppoe pv rename resize2fs runc tar tini ttyd tune2fs \
         uclient-fetch uhttpd uhttpd-mod-ubus unzip uqmi usb-modeswitch uuidgen wget-ssl whereis \
-        which wpad-basic wwan xfs-fsck xfs-mkfs xz xz-utils ziptool zoneinfo-asia zoneinfo-core zstd \
+        which wpad-mesh-openssl wwan xfs-fsck xfs-mkfs xz xz-utils ziptool zoneinfo-asia zoneinfo-core zstd \
         \
         luci luci-base luci-compat luci-i18n-base-zh-cn luci-lib-base \
         luci-lib-ip luci-lib-ipkg luci-lib-jsonc luci-lib-nixio luci-mod-admin-full luci-mod-network \
@@ -270,9 +270,13 @@ custom_settings() {
             error_msg "${release_file} not found."
         fi
 
-        # Repack the modified root filesystem
+        # Repack the modified root filesystem.
+        # This script runs unprivileged, so the unpacked tree is owned by the
+        # build user. Force uid/gid 0 on repack, otherwise every file ships
+        # with a non-root owner and rpcd's rc_check_script() drops all
+        # /etc/init.d entries from `ubus call rc list` (empty Startup page).
         echo -e "${INFO} Repacking into ${original_filename}..."
-        (cd "${unpack_path}" && tar -czpf "${tmp_path}/${original_filename}" ./)
+        (cd "${unpack_path}" && tar --numeric-owner --owner=0 --group=0 -czpf "${tmp_path}/${original_filename}" ./)
 
         # Move the repacked archive to the output directory
         echo -e "${INFO} Moving modified rootfs to output directory..."
